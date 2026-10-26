@@ -1,0 +1,1903 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ASTRAL SLING — Neon Gravity Arcade</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #050711;
+      color: #f8fafc;
+      overflow-x: hidden;
+    }
+    .glass-panel {
+      background: rgba(12, 17, 34, 0.78);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(99, 102, 241, 0.24);
+    }
+    .glass-card {
+      background: rgba(17, 24, 48, 0.82);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-card:hover {
+      border-color: rgba(56, 189, 248, 0.45);
+      transform: translateY(-1px);
+    }
+    .neon-cyan {
+      text-shadow: 0 0 12px rgba(34, 211, 238, 0.65);
+    }
+    .neon-fuchsia {
+      text-shadow: 0 0 12px rgba(232, 121, 249, 0.65);
+    }
+    .neon-amber {
+      text-shadow: 0 0 12px rgba(251, 191, 36, 0.65);
+    }
+    .btn-glow {
+      transition: all 0.18s ease;
+    }
+    .btn-glow:active {
+      transform: scale(0.96);
+    }
+    canvas {
+      display: block;
+      touch-action: none;
+    }
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.75; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.03); }
+    }
+    .animate-pulse-glow {
+      animation: pulseGlow 2.4s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#050711] text-slate-100 selection:bg-cyan-500 selection:text-slate-950">
+
+  <!-- TOP NAVIGATION & TELEMETRY BAR -->
+  <header class="glass-panel sticky top-0 z-30 px-3 sm:px-5 py-2.5 border-b border-indigo-500/20">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <!-- Brand + Class Indicator -->
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 via-indigo-500 to-fuchsia-500 p-[1.5px] shadow-lg shadow-cyan-500/20">
+          <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+            <svg class="w-5 h-5 text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M19.07 4.93l-2.12 2.12M7.05 16.95l-2.12 2.12" />
+            </svg>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-extrabold tracking-tight text-sm sm:text-base bg-gradient-to-r from-cyan-300 via-sky-200 to-fuchsia-300 bg-clip-text text-transparent">
+              ASTRAL SLING
+            </h1>
+            <span id="shipBadge" class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-400/30">
+              Vanguard
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-400 hidden sm:block">Orbital Gravity &amp; Prism Defense</p>
+        </div>
+      </div>
+
+      <!-- Center Live Telemetry -->
+      <div class="flex items-center gap-2 sm:gap-4 bg-slate-900/80 border border-slate-800/90 rounded-xl px-3 py-1.5">
+        <div class="text-center">
+          <div class="text-[10px] uppercase tracking-wider text-slate-400">Score</div>
+          <div id="hudScore" class="font-bold text-sm sm:text-base text-white tabular-nums">0</div>
+        </div>
+        <div class="h-6 w-[1px] bg-slate-800"></div>
+        <div class="text-center">
+          <div class="text-[10px] uppercase tracking-wider text-slate-400">Best</div>
+          <div id="hudHigh" class="font-bold text-sm sm:text-base text-amber-300 tabular-nums">0</div>
+        </div>
+        <div class="h-6 w-[1px] bg-slate-800"></div>
+        <div class="text-center">
+          <div class="text-[10px] uppercase tracking-wider text-slate-400">Wave</div>
+          <div id="hudWave" class="font-bold text-sm sm:text-base text-cyan-300 tabular-nums">1</div>
+        </div>
+        <div class="h-6 w-[1px] bg-slate-800"></div>
+        <div class="text-center">
+          <div class="text-[10px] uppercase tracking-wider text-slate-400">Stardust</div>
+          <div class="flex items-center justify-center gap-1 font-bold text-sm sm:text-base text-fuchsia-300 tabular-nums">
+            <span>✦</span><span id="hudDust">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-1.5">
+        <button id="btnOpenUpgrades" type="button" class="btn-glow relative px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-fuchsia-500/15 hover:bg-fuchsia-500/25 text-fuchsia-200 border border-fuchsia-500/30 flex items-center gap-1.5">
+          <span>⚡ Lab</span>
+          <span id="upgradeReadyDot" class="hidden w-2 h-2 rounded-full bg-fuchsia-400 animate-ping"></span>
+        </button>
+        <button id="btnOpenGuide" type="button" class="btn-glow px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border border-slate-700">
+          Guide
+        </button>
+        <button id="btnMute" type="button" aria-label="Toggle Sound" class="btn-glow px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800/80 hover:bg-slate-700/80 text-cyan-300 border border-slate-700">
+          🔊 SFX
+        </button>
+        <button id="btnPause" type="button" class="btn-glow px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800/80 hover:bg-slate-700/80 text-amber-300 border border-slate-700">
+          ⏸ Pause
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE: CANVAS + SIDE/BOTTOM STATUS -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-2 sm:px-4 py-2 sm:py-3 flex flex-col lg:flex-row gap-3">
+    
+    <!-- GAME STAGE COLUMN -->
+    <div class="flex-1 flex flex-col min-w-0">
+      
+      <!-- Sub-HUD Bar: Shield, Orbitals, Combo, Boss Bar -->
+      <div class="glass-panel rounded-t-2xl px-3 sm:px-4 py-2 border-b-0 flex flex-wrap items-center justify-between gap-2">
+        <!-- Hull Integrity -->
+        <div class="flex items-center gap-2 min-w-[140px] flex-1 max-w-xs">
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-cyan-300 whitespace-nowrap">Shield</span>
+          <div class="flex-1 h-2.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800 p-[1px]">
+            <div id="hullBar" class="h-full bg-gradient-to-r from-cyan-400 to-emerald-400 rounded-full transition-all duration-150" style="width: 100%"></div>
+          </div>
+          <span id="hullText" class="text-xs font-mono text-slate-300 tabular-nums">100%</span>
+        </div>
+
+        <!-- Orbital Charge Pips -->
+        <div class="flex items-center gap-2">
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-fuchsia-300">Orbitals</span>
+          <div id="orbitalPips" class="flex items-center gap-1"></div>
+          <span id="comboBadge" class="ml-1 px-2 py-0.5 rounded-md text-xs font-extrabold bg-amber-500/20 text-amber-300 border border-amber-400/30 tabular-nums">
+            x1.0
+          </span>
+        </div>
+
+        <!-- Boss Alert Bar (Hidden when no boss) -->
+        <div id="bossHudContainer" class="hidden w-full mt-1 pt-1 border-t border-rose-500/20 flex items-center gap-2">
+          <span id="bossNameLabel" class="text-[11px] font-bold uppercase tracking-wider text-rose-400 whitespace-nowrap animate-pulse">
+            ⚠ ECLIPSE LEVIATHAN
+          </span>
+          <div class="flex-1 h-2 bg-slate-950 rounded-full overflow-hidden border border-rose-500/40">
+            <div id="bossHpBar" class="h-full bg-gradient-to-r from-rose-500 via-orange-500 to-amber-400 transition-all duration-100" style="width: 100%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Canvas Wrapper -->
+      <div id="canvasContainer" class="relative w-full h-[390px] sm:h-[470px] lg:h-[520px] bg-[#04060e] border border-indigo-500/25 overflow-hidden shadow-2xl shadow-indigo-950/50">
+        <canvas id="gameCanvas" class="w-full h-full cursor-crosshair"></canvas>
+
+        <!-- Floating Event Toast inside Arena -->
+        <div id="arenaToast" class="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full text-xs font-bold tracking-wide bg-slate-900/90 text-cyan-300 border border-cyan-400/40 opacity-0 transition-opacity duration-300">
+          WAVE 1 ENGAGED
+        </div>
+
+        <!-- START / CLASS SELECTION OVERLAY -->
+        <div id="startOverlay" class="absolute inset-0 z-20 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div class="max-w-lg w-full glass-panel rounded-2xl p-5 sm:p-6 border border-cyan-500/30 shadow-2xl text-center my-auto">
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-cyan-500/10 text-cyan-300 border border-cyan-500/25 mb-2">
+              <span>✦</span> INTERACTIVE COSMIC ROGUELITE
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-black tracking-tight bg-gradient-to-r from-cyan-300 via-white to-fuchsia-300 bg-clip-text text-transparent">
+              ASTRAL SLING
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-300 mt-1.5 leading-relaxed">
+              Harvest glowing <span class="text-cyan-300 font-semibold">Prism Orbs</span> into your gravity ring. Orbiting crystals auto-zap enemies—or unleash a <span class="text-fuchsia-300 font-semibold">360° Nova Sling</span> to detonate the entire arena!
+            </p>
+
+            <!-- Ship Class Picker -->
+            <div class="mt-4 text-left">
+              <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Select Star-Cruiser Class</div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <button type="button" data-ship="vanguard" class="ship-select-btn glass-card rounded-xl p-2.5 text-left border-2 border-cyan-400 bg-cyan-500/10">
+                  <div class="flex items-center justify-between">
+                    <span class="font-bold text-xs text-cyan-300">Vanguard</span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-200">Balanced</span>
+                  </div>
+                  <p class="text-[11px] text-slate-400 mt-1">Rapid twin blasters &amp; agile phase dash.</p>
+                </button>
+                <button type="button" data-ship="weaver" class="ship-select-btn glass-card rounded-xl p-2.5 text-left border border-slate-700/80">
+                  <div class="flex items-center justify-between">
+                    <span class="font-bold text-xs text-fuchsia-300">Gravity Weaver</span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-fuchsia-500/20 text-fuchsia-200">Orbit +2</span>
+                  </div>
+                  <p class="text-[11px] text-slate-400 mt-1">Wide magnetic pull &amp; extra crystal slots.</p>
+                </button>
+                <button type="button" data-ship="valkyrie" class="ship-select-btn glass-card rounded-xl p-2.5 text-left border border-slate-700/80">
+                  <div class="flex items-center justify-between">
+                    <span class="font-bold text-xs text-amber-300">Solar Valkyrie</span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-200">Heavy Nova</span>
+                  </div>
+                  <p class="text-[11px] text-slate-400 mt-1">Explosive shockwave dash &amp; heavy armor.</p>
+                </button>
+              </div>
+            </div>
+
+            <!-- Quick Controls Summary -->
+            <div class="mt-4 grid grid-cols-3 gap-2 text-left bg-slate-900/75 rounded-xl p-2.5 border border-slate-800 text-[11px]">
+              <div>
+                <div class="font-bold text-cyan-300">Move / Steer</div>
+                <div class="text-slate-400">WASD, Arrows, or Drag on Arena</div>
+              </div>
+              <div>
+                <div class="font-bold text-fuchsia-300">Nova Sling</div>
+                <div class="text-slate-400">Press <kbd class="px-1 py-0.5 bg-slate-800 rounded text-slate-200">E</kbd> / Right-Click</div>
+              </div>
+              <div>
+                <div class="font-bold text-amber-300">Phase Dash</div>
+                <div class="text-slate-400">Press <kbd class="px-1 py-0.5 bg-slate-800 rounded text-slate-200">Space</kbd> / Shift</div>
+              </div>
+            </div>
+
+            <button id="btnStartGame" type="button" class="btn-glow mt-5 w-full py-3 rounded-xl font-bold text-sm sm:text-base bg-gradient-to-r from-cyan-400 via-sky-400 to-fuchsia-500 text-slate-950 shadow-lg shadow-cyan-500/25 hover:brightness-110">
+              🚀 LAUNCH MISSION
+            </button>
+          </div>
+        </div>
+
+        <!-- GAME OVER OVERLAY -->
+        <div id="gameOverOverlay" class="hidden absolute inset-0 z-20 bg-slate-950/88 backdrop-blur-md flex items-center justify-center p-4">
+          <div class="max-w-md w-full glass-panel rounded-2xl p-6 border border-rose-500/35 text-center shadow-2xl">
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30 mb-2">
+              CORE DEstabilized
+            </div>
+            <h2 class="text-2xl font-black text-white">MISSION REPORT</h2>
+            <p id="gameOverSubtitle" class="text-xs text-slate-400 mt-1">Your starlight echoed across the sector.</p>
+
+            <div class="grid grid-cols-2 gap-2.5 my-4">
+              <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3">
+                <div class="text-[10px] uppercase tracking-wider text-slate-400">Final Score</div>
+                <div id="finalScoreText" class="text-xl font-black text-cyan-300 mt-0.5 tabular-nums">0</div>
+              </div>
+              <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3">
+                <div class="text-[10px] uppercase tracking-wider text-slate-400">Wave Reached</div>
+                <div id="finalWaveText" class="text-xl font-black text-fuchsia-300 mt-0.5 tabular-nums">1</div>
+              </div>
+              <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3">
+                <div class="text-[10px] uppercase tracking-wider text-slate-400">Hostiles Cleared</div>
+                <div id="finalKillsText" class="text-lg font-bold text-amber-300 mt-0.5 tabular-nums">0</div>
+              </div>
+              <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3">
+                <div class="text-[10px] uppercase tracking-wider text-slate-400">Max Combo</div>
+                <div id="finalComboText" class="text-lg font-bold text-emerald-300 mt-0.5 tabular-nums">x1.0</div>
+              </div>
+            </div>
+
+            <div class="flex gap-2">
+              <button id="btnPlayAgain" type="button" class="btn-glow flex-1 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-cyan-400 to-fuchsia-500 text-slate-950 shadow-lg shadow-cyan-500/20">
+                ↻ Play Again
+              </button>
+              <button id="btnChangeShip" type="button" class="btn-glow px-4 py-2.5 rounded-xl font-semibold text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">
+                Change Ship
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TACTILE CONTROL DOCK (Great for Touch, Mouse & Quick Action) -->
+      <div class="glass-panel rounded-b-2xl px-3 sm:px-4 py-2.5 border-t-0 flex flex-wrap items-center justify-between gap-2">
+        <!-- Virtual Direction / Pointer Hint -->
+        <div class="flex items-center gap-1.5">
+          <button id="btnMoveLeft" type="button" class="btn-glow w-9 h-9 rounded-lg bg-slate-800/90 hover:bg-slate-700 active:bg-cyan-500/30 border border-slate-700 flex items-center justify-center text-sm font-bold" aria-label="Steer Left">◀</button>
+          <button id="btnMoveUp" type="button" class="btn-glow w-9 h-9 rounded-lg bg-slate-800/90 hover:bg-slate-700 active:bg-cyan-500/30 border border-slate-700 flex items-center justify-center text-sm font-bold" aria-label="Steer Up">▲</button>
+          <button id="btnMoveDown" type="button" class="btn-glow w-9 h-9 rounded-lg bg-slate-800/90 hover:bg-slate-700 active:bg-cyan-500/30 border border-slate-700 flex items-center justify-center text-sm font-bold" aria-label="Steer Down">▼</button>
+          <button id="btnMoveRight" type="button" class="btn-glow w-9 h-9 rounded-lg bg-slate-800/90 hover:bg-slate-700 active:bg-cyan-500/30 border border-slate-700 flex items-center justify-center text-sm font-bold" aria-label="Steer Right">▶</button>
+          <span class="text-[11px] text-slate-400 ml-1 hidden md:inline">Drag in arena or use WASD / Arrows</span>
+        </div>
+
+        <!-- Active Ability Buttons with Cooldown Bars -->
+        <div class="flex items-center gap-2">
+          <button id="btnDashAction" type="button" class="btn-glow relative overflow-hidden px-3.5 py-2 rounded-xl text-xs font-bold bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 border border-cyan-400/40 flex items-center gap-1.5">
+            <span>⚡ PHASE DASH</span>
+            <span id="dashStatusText" class="text-[10px] font-mono text-cyan-300">READY</span>
+          </button>
+
+          <button id="btnNovaAction" type="button" class="btn-glow relative overflow-hidden px-3.5 py-2 rounded-xl text-xs font-bold bg-fuchsia-500/20 hover:bg-fuchsia-500/30 text-fuchsia-200 border border-fuchsia-400/40 flex items-center gap-1.5">
+            <span>💥 SLING NOVA</span>
+            <span id="novaCountText" class="text-[10px] font-mono text-fuchsia-300">(0)</span>
+          </button>
+
+          <button id="btnOverdriveAction" type="button" class="btn-glow px-3 py-2 rounded-xl text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/40 flex items-center gap-1">
+            <span>🛡 REPAIR</span>
+            <span class="text-[10px] font-mono text-amber-300">25✦</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIDEBAR: LIVE UPGRADE TECH LAB & TELEMETRY -->
+    <aside class="w-full lg:w-72 flex flex-col gap-3">
+      <!-- Live Tech Upgrades Card -->
+      <div class="glass-panel rounded-2xl p-3.5 flex-1 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <h2 class="text-xs font-extrabold uppercase tracking-wider text-fuchsia-300">Stardust Tech Lab</h2>
+              <p class="text-[11px] text-slate-400">Spend ✦ Stardust anytime to upgrade</p>
+            </div>
+            <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-fuchsia-500/15 text-fuchsia-300 border border-fuchsia-500/30 tabular-nums">
+              ✦ <span id="sidebarDust">0</span>
+            </span>
+          </div>
+
+          <div class="space-y-2 mt-2.5" id="upgradeListContainer">
+            <!-- Upgrade 1: Magnet -->
+            <div class="glass-card rounded-xl p-2.5">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-xs font-bold text-cyan-200">Gravity Attractor</div>
+                  <div class="text-[10px] text-slate-400">Wider orb pull &amp; tether beam</div>
+                </div>
+                <button id="btnUpgMagnet" type="button" class="btn-glow px-2.5 py-1 rounded-lg text-[11px] font-bold bg-cyan-500/20 hover:bg-cyan-500/35 text-cyan-200 border border-cyan-400/30 tabular-nums">
+                  ✦ 15
+                </button>
+              </div>
+              <div id="pipsMagnet" class="flex gap-1 mt-2"></div>
+            </div>
+
+            <!-- Upgrade 2: Orbital Ring -->
+            <div class="glass-card rounded-xl p-2.5">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-xs font-bold text-fuchsia-200">Orbital Array</div>
+                  <div class="text-[10px] text-slate-400">+1 Max Crystal &amp; faster zaps</div>
+                </div>
+                <button id="btnUpgOrbit" type="button" class="btn-glow px-2.5 py-1 rounded-lg text-[11px] font-bold bg-fuchsia-500/20 hover:bg-fuchsia-500/35 text-fuchsia-200 border border-fuchsia-400/30 tabular-nums">
+                  ✦ 20
+                </button>
+              </div>
+              <div id="pipsOrbit" class="flex gap-1 mt-2"></div>
+            </div>
+
+            <!-- Upgrade 3: Plasma Cannon -->
+            <div class="glass-card rounded-xl p-2.5">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-xs font-bold text-amber-200">Prism Blasters</div>
+                  <div class="text-[10px] text-slate-400">Higher blaster fire rate &amp; pierce</div>
+                </div>
+                <button id="btnUpgBlaster" type="button" class="btn-glow px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 border border-amber-400/30 tabular-nums">
+                  ✦ 20
+                </button>
+              </div>
+              <div id="pipsBlaster" class="flex gap-1 mt-2"></div>
+            </div>
+
+            <!-- Upgrade 4: Phase Thrusters -->
+            <div class="glass-card rounded-xl p-2.5">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-xs font-bold text-emerald-200">Phase Thrusters</div>
+                  <div class="text-[10px] text-slate-400">Faster speed &amp; dash recharge</div>
+                </div>
+                <button id="btnUpgSpeed" type="button" class="btn-glow px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-500/20 hover:bg-emerald-500/35 text-emerald-200 border border-emerald-400/30 tabular-nums">
+                  ✦ 15
+                </button>
+              </div>
+              <div id="pipsSpeed" class="flex gap-1 mt-2"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pilot Log / Active Perks -->
+        <div class="mt-3 pt-2.5 border-t border-slate-800/90">
+          <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+            <span class="font-semibold uppercase tracking-wider text-slate-300">Sector Status</span>
+            <span id="enemyCountLabel" class="text-cyan-300 font-mono">0 Hostiles</span>
+          </div>
+          <p id="pilotLogText" class="text-[11px] text-slate-300 bg-slate-900/90 rounded-lg p-2 border border-slate-800 leading-snug">
+            Collect glowing cyan &amp; magenta shards to build your orbital shield ring!
+          </p>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- MODAL: PILOT GUIDE / HOW TO PLAY -->
+  <div id="guideModal" class="hidden fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="max-w-md w-full glass-panel rounded-2xl p-5 border border-cyan-500/30 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <h3 class="font-extrabold text-base text-cyan-300">✦ PILOT TACTICAL GUIDE</h3>
+        <button id="btnCloseGuide" type="button" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-xs font-bold">✕</button>
+      </div>
+      <div class="space-y-3 my-4 text-xs text-slate-300 leading-relaxed">
+        <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
+          <div class="font-bold text-cyan-300 mb-0.5">1. Orbital Crystal Ring</div>
+          Floating <span class="text-cyan-200 font-semibold">Prism Shards</span> lock into orbit around your ship when collected. While orbiting, they automatically fire laser arcs at nearby enemies and absorb 1 hit if an enemy collides with you.
+        </div>
+        <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
+          <div class="font-bold text-fuchsia-300 mb-0.5">2. Sling Nova Burst (E / Right-Click)</div>
+          When you have at least 1 orbiting crystal, trigger <span class="text-fuchsia-200 font-semibold">Sling Nova</span> to launch all crystals outward in a high-damage 360° piercing volley that boosts your score multiplier!
+        </div>
+        <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
+          <div class="font-bold text-amber-300 mb-0.5">3. Phase Dash (Space / Shift)</div>
+          Dash through enemy formations or sniper beams with brief invulnerability and emit an EMP pulse at your destination.
+        </div>
+      </div>
+      <button id="btnResumeFromGuide" type="button" class="btn-glow w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-cyan-400 text-slate-950">
+        Got It — Back to Cockpit
+      </button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      // ==========================================
+      // PERSISTENT STORAGE HELPERS
+      // ==========================================
+      function loadHighScore() {
+        try {
+          const val = localStorage.getItem('astral_sling_best_v1');
+          return val ? parseInt(val, 10) || 0 : 0;
+        } catch (e) {
+          return 0;
+        }
+      }
+      function saveHighScore(score) {
+        try {
+          localStorage.setItem('astral_sling_best_v1', String(score));
+        } catch (e) {
+          // Ignore sandbox storage blocks
+        }
+      }
+
+      // ==========================================
+      // SYNTHESIZED WEB AUDIO ENGINE
+      // ==========================================
+      const Sound = {
+        ctx: null,
+        muted: false,
+        init() {
+          if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) {
+              this.ctx = new AudioCtx();
+            }
+          }
+          if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+          }
+        },
+        playTone(freq, type, duration, vol = 0.12, slideTo = null) {
+          if (this.muted) return;
+          this.init();
+          if (!this.ctx) return;
+          try {
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, now);
+            if (slideTo) {
+              osc.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), now + duration);
+            }
+            gain.gain.setValueAtTime(vol, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now);
+            osc.stop(now + duration);
+          } catch (e) {}
+        },
+        orbPickup(combo) {
+          const scale = [523.25, 587.33, 659.25, 783.99, 880, 1046.5];
+          const note = scale[Math.min(scale.length - 1, Math.floor(combo))];
+          this.playTone(note, 'sine', 0.16, 0.12, note * 1.25);
+        },
+        laser() {
+          this.playTone(680, 'triangle', 0.08, 0.06, 220);
+        },
+        dash() {
+          this.playTone(180, 'sawtooth', 0.22, 0.11, 620);
+        },
+        nova() {
+          this.playTone(440, 'sawtooth', 0.35, 0.14, 110);
+          setTimeout(() => this.playTone(880, 'sine', 0.3, 0.12, 1320), 50);
+        },
+        hit() {
+          this.playTone(130, 'square', 0.18, 0.14, 48);
+        },
+        upgrade() {
+          this.playTone(523.25, 'triangle', 0.12, 0.12, 659.25);
+          setTimeout(() => this.playTone(783.99, 'sine', 0.22, 0.14, 1046.5), 90);
+        },
+        waveClear() {
+          [523.25, 659.25, 783.99, 1046.5].forEach((f, idx) => {
+            setTimeout(() => this.playTone(f, 'triangle', 0.18, 0.1), idx * 70);
+          });
+        }
+      };
+
+      // ==========================================
+      // SHIP CLASSES & CONFIG
+      // ==========================================
+      const SHIP_CLASSES = {
+        vanguard: {
+          name: 'Vanguard',
+          color: '#22d3ee',
+          accent: '#38bdf8',
+          baseSpeed: 265,
+          baseMaxOrbitals: 4,
+          fireInterval: 0.24,
+          magnetRadius: 115,
+          maxHp: 100
+        },
+        weaver: {
+          name: 'Gravity Weaver',
+          color: '#e879f9',
+          accent: '#c084fc',
+          baseSpeed: 245,
+          baseMaxOrbitals: 6,
+          fireInterval: 0.29,
+          magnetRadius: 165,
+          maxHp: 95
+        },
+        valkyrie: {
+          name: 'Solar Valkyrie',
+          color: '#fbbf24',
+          accent: '#f43f5e',
+          baseSpeed: 250,
+          baseMaxOrbitals: 4,
+          fireInterval: 0.27,
+          magnetRadius: 120,
+          maxHp: 125
+        }
+      };
+
+      // ==========================================
+      // DOM ELEMENTS
+      // ==========================================
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      const container = document.getElementById('canvasContainer');
+
+      const hudScore = document.getElementById('hudScore');
+      const hudHigh = document.getElementById('hudHigh');
+      const hudWave = document.getElementById('hudWave');
+      const hudDust = document.getElementById('hudDust');
+      const sidebarDust = document.getElementById('sidebarDust');
+      const shipBadge = document.getElementById('shipBadge');
+      const hullBar = document.getElementById('hullBar');
+      const hullText = document.getElementById('hullText');
+      const orbitalPips = document.getElementById('orbitalPips');
+      const comboBadge = document.getElementById('comboBadge');
+      const bossHudContainer = document.getElementById('bossHudContainer');
+      const bossNameLabel = document.getElementById('bossNameLabel');
+      const bossHpBar = document.getElementById('bossHpBar');
+      const arenaToast = document.getElementById('arenaToast');
+      const enemyCountLabel = document.getElementById('enemyCountLabel');
+      const pilotLogText = document.getElementById('pilotLogText');
+      const upgradeReadyDot = document.getElementById('upgradeReadyDot');
+
+      const startOverlay = document.getElementById('startOverlay');
+      const gameOverOverlay = document.getElementById('gameOverOverlay');
+      const guideModal = document.getElementById('guideModal');
+
+      const dashStatusText = document.getElementById('dashStatusText');
+      const novaCountText = document.getElementById('novaCountText');
+
+      // ==========================================
+      // GAME STATE
+      // ==========================================
+      let width = 800;
+      let height = 500;
+      let animId = null;
+      let lastTime = 0;
+
+      const state = {
+        running: false,
+        paused: false,
+        gameOver: false,
+        selectedShip: 'vanguard',
+        score: 0,
+        highScore: loadHighScore(),
+        stardust: 0,
+        wave: 1,
+        waveTimer: 0,
+        kills: 0,
+        combo: 1.0,
+        maxCombo: 1.0,
+        comboTimer: 0,
+        screenShake: 0,
+        upgrades: {
+          magnet: 1,
+          orbit: 1,
+          blaster: 1,
+          speed: 1
+        }
+      };
+
+      hudHigh.textContent = state.highScore.toLocaleString();
+
+      const player = {
+        x: 400,
+        y: 250,
+        vx: 0,
+        vy: 0,
+        angle: 0,
+        hp: 100,
+        maxHp: 100,
+        dashCooldown: 0,
+        dashActive: 0,
+        invuln: 0,
+        fireTimer: 0,
+        orbitals: [],
+        orbitAngle: 0
+      };
+
+      const keys = {};
+      const virtualDir = { left: false, right: false, up: false, down: false };
+      const pointer = { active: false, x: 400, y: 250 };
+
+      let stars = [];
+      let orbs = [];
+      let bullets = [];
+      let enemyBullets = [];
+      let enemies = [];
+      let particles = [];
+      let floatTexts = [];
+      let shockwaves = [];
+
+      // ==========================================
+      // INITIALIZATION & RESIZING
+      // ==========================================
+      function initStars() {
+        stars = [];
+        for (let i = 0; i < 75; i++) {
+          stars.push({
+            x: Math.random() * width,
+            y: Math.random() * height,
+            r: Math.random() * 1.8 + 0.5,
+            alpha: Math.random() * 0.65 + 0.2,
+            speed: Math.random() * 14 + 4,
+            hue: Math.random() > 0.5 ? '#38bdf8' : '#e879f9'
+          });
+        }
+      }
+
+      function resizeCanvas() {
+        const rect = container.getBoundingClientRect();
+        width = Math.max(300, Math.floor(rect.width));
+        height = Math.max(300, Math.floor(rect.height));
+        canvas.width = width;
+        canvas.height = height;
+        if (stars.length === 0) initStars();
+        player.x = Math.min(width - 25, Math.max(25, player.x));
+        player.y = Math.min(height - 25, Math.max(25, player.y));
+        drawFrame();
+      }
+
+      window.addEventListener('resize', resizeCanvas);
+
+      // ==========================================
+      // UI UPDATERS & TOASTS
+      // ==========================================
+      let toastTimeout = null;
+      function showArenaToast(msg) {
+        arenaToast.textContent = msg;
+        arenaToast.style.opacity = '1';
+        if (toastTimeout) clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => {
+          arenaToast.style.opacity = '0';
+        }, 1900);
+      }
+
+      function setPilotLog(msg) {
+        pilotLogText.textContent = msg;
+      }
+
+      function getMaxOrbitals() {
+        const cfg = SHIP_CLASSES[state.selectedShip];
+        return cfg.baseMaxOrbitals + (state.upgrades.orbit - 1);
+      }
+
+      function getUpgradeCost(key) {
+        const base = (key === 'orbit' || key === 'blaster') ? 20 : 15;
+        return base * state.upgrades[key];
+      }
+
+      function renderPips(elId, level, colorClass) {
+        const containerEl = document.getElementById(elId);
+        if (!containerEl) return;
+        let html = '';
+        for (let i = 1; i <= 5; i++) {
+          const active = i <= level;
+          html += `<span class="h-1.5 flex-1 rounded-full ${active ? colorClass : 'bg-slate-800'}"></span>`;
+        }
+        containerEl.innerHTML = html;
+      }
+
+      function updateUpgradeUI() {
+        renderPips('pipsMagnet', state.upgrades.magnet, 'bg-cyan-400');
+        renderPips('pipsOrbit', state.upgrades.orbit, 'bg-fuchsia-400');
+        renderPips('pipsBlaster', state.upgrades.blaster, 'bg-amber-400');
+        renderPips('pipsSpeed', state.upgrades.speed, 'bg-emerald-400');
+
+        const map = [
+          { key: 'magnet', btnId: 'btnUpgMagnet' },
+          { key: 'orbit', btnId: 'btnUpgOrbit' },
+          { key: 'blaster', btnId: 'btnUpgBlaster' },
+          { key: 'speed', btnId: 'btnUpgSpeed' }
+        ];
+        let anyAffordable = false;
+        map.forEach(({ key, btnId }) => {
+          const btn = document.getElementById(btnId);
+          const lvl = state.upgrades[key];
+          if (lvl >= 5) {
+            btn.textContent = 'MAX';
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+          } else {
+            const cost = getUpgradeCost(key);
+            btn.textContent = `✦ ${cost}`;
+            btn.disabled = state.stardust < cost;
+            if (state.stardust >= cost) {
+              anyAffordable = true;
+              btn.classList.remove('opacity-50');
+            } else {
+              btn.classList.add('opacity-50');
+            }
+          }
+        });
+
+        if (anyAffordable) {
+          upgradeReadyDot.classList.remove('hidden');
+        } else {
+          upgradeReadyDot.classList.add('hidden');
+        }
+      }
+
+      function updateHUD() {
+        hudScore.textContent = Math.floor(state.score).toLocaleString();
+        hudHigh.textContent = Math.floor(state.highScore).toLocaleString();
+        hudWave.textContent = state.wave;
+        hudDust.textContent = state.stardust;
+        sidebarDust.textContent = state.stardust;
+
+        const pct = Math.max(0, Math.min(100, Math.round((player.hp / player.maxHp) * 100)));
+        hullBar.style.width = `${pct}%`;
+        hullText.textContent = `${pct}%`;
+
+        const maxOrb = getMaxOrbitals();
+        let pipsHtml = '';
+        for (let i = 0; i < maxOrb; i++) {
+          const filled = i < player.orbitals.length;
+          pipsHtml += `<span class="w-2.5 h-2.5 rounded-full border ${
+            filled
+              ? 'bg-fuchsia-400 border-fuchsia-200 shadow-sm shadow-fuchsia-400/80'
+              : 'bg-slate-900 border-slate-700'
+          }"></span>`;
+        }
+        orbitalPips.innerHTML = pipsHtml;
+        novaCountText.textContent = `(${player.orbitals.length}/${maxOrb})`;
+
+        comboBadge.textContent = `x${state.combo.toFixed(1)}`;
+        enemyCountLabel.textContent = `${enemies.length} Hostile${enemies.length === 1 ? '' : 's'}`;
+
+        if (player.dashCooldown <= 0) {
+          dashStatusText.textContent = 'READY';
+        } else {
+          dashStatusText.textContent = `${player.dashCooldown.toFixed(1)}s`;
+        }
+
+        const boss = enemies.find((e) => e.isBoss);
+        if (boss) {
+          bossHudContainer.classList.remove('hidden');
+          bossNameLabel.textContent = `⚠ ${boss.name}`;
+          const bossPct = Math.max(0, Math.min(100, (boss.hp / boss.maxHp) * 100));
+          bossHpBar.style.width = `${bossPct}%`;
+        } else {
+          bossHudContainer.classList.add('hidden');
+        }
+
+        updateUpgradeUI();
+      }
+
+      // ==========================================
+      // SPAWNERS (ORBS, ENEMIES, FX)
+      // ==========================================
+      function spawnOrb(x, y, value = 1) {
+        const colors = ['#22d3ee', '#e879f9', '#fbbf24', '#34d399'];
+        orbs.push({
+          x: x ?? (40 + Math.random() * (width - 80)),
+          y: y ?? (40 + Math.random() * (height - 80)),
+          vx: (Math.random() - 0.5) * 35,
+          vy: (Math.random() - 0.5) * 35,
+          r: 6.5,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          value,
+          pulse: Math.random() * Math.PI * 2
+        });
+      }
+
+      function addParticles(x, y, color, count = 12, speed = 130) {
+        for (let i = 0; i < count; i++) {
+          const ang = Math.random() * Math.PI * 2;
+          const spd = (0.25 + Math.random() * 0.75) * speed;
+          particles.push({
+            x,
+            y,
+            vx: Math.cos(ang) * spd,
+            vy: Math.sin(ang) * spd,
+            r: Math.random() * 2.8 + 1.2,
+            life: 0.35 + Math.random() * 0.35,
+            maxLife: 0.7,
+            color
+          });
+        }
+      }
+
+      function addFloatText(x, y, text, color = '#38bdf8') {
+        floatTexts.push({
+          x,
+          y,
+          text,
+          color,
+          life: 0.85
+        });
+      }
+
+      function spawnWave(waveNum) {
+        const count = 4 + Math.min(14, waveNum * 2);
+        const isBossWave = waveNum % 3 === 0;
+
+        for (let i = 0; i < count; i++) {
+          // Spawn along arena edges away from player
+          const edge = Math.floor(Math.random() * 4);
+          let x = 20;
+          let y = 20;
+          if (edge === 0) { x = Math.random() * width; y = 18; }
+          else if (edge === 1) { x = width - 18; y = Math.random() * height; }
+          else if (edge === 2) { x = Math.random() * width; y = height - 18; }
+          else { x = 18; y = Math.random() * height; }
+
+          const roll = Math.random();
+          let type = 'drifter';
+          if (waveNum >= 2 && roll > 0.68) type = 'sniper';
+          else if (waveNum >= 3 && roll > 0.48 && roll <= 0.68) type = 'pulsar';
+
+          const hpBase = type === 'pulsar' ? 42 : type === 'sniper' ? 26 : 20;
+          const hp = hpBase + waveNum * 6;
+
+          enemies.push({
+            x,
+            y,
+            vx: 0,
+            vy: 0,
+            r: type === 'pulsar' ? 16 : 12,
+            type,
+            hp,
+            maxHp: hp,
+            speed: type === 'drifter' ? 78 + waveNum * 4 : type === 'sniper' ? 56 : 50,
+            fireCooldown: 1.4 + Math.random() * 1.5,
+            isBoss: false
+          });
+        }
+
+        if (isBossWave) {
+          const bossHp = 260 + waveNum * 85;
+          enemies.push({
+            x: width * 0.5,
+            y: 48,
+            vx: 65,
+            vy: 0,
+            r: 28,
+            type: 'boss',
+            name: waveNum >= 6 ? 'OMEGA ARCHON' : 'ECLIPSE LEVIATHAN',
+            hp: bossHp,
+            maxHp: bossHp,
+            speed: 62,
+            fireCooldown: 1.5,
+            isBoss: true,
+            phaseAngle: 0
+          });
+          showArenaToast(`⚠ BOSS WAVE ${waveNum}: ECLIPSE LEVIATHAN`);
+          setPilotLog('Boss detected! Build your Orbital Ring and unleash Sling Nova (E) for massive burst damage!');
+        } else {
+          showArenaToast(`WAVE ${waveNum} INCOMING`);
+        }
+
+        // Also seed some fresh Prism Orbs
+        for (let j = 0; j < 4; j++) {
+          spawnOrb();
+        }
+        updateHUD();
+      }
+
+      // ==========================================
+      // PLAYER ABILITIES: DASH, NOVA, REPAIR, UPGRADE
+      // ==========================================
+      function triggerDash() {
+        if (!state.running || state.paused || state.gameOver) return;
+        if (player.dashCooldown > 0) return;
+
+        const speedLvl = state.upgrades.speed;
+        player.dashCooldown = Math.max(1.1, 2.4 - speedLvl * 0.22);
+        player.dashActive = 0.22;
+        player.invuln = 0.45;
+
+        // Determine dash direction
+        let dx = Math.cos(player.angle);
+        let dy = Math.sin(player.angle);
+        const moveX = (keys['KeyD'] || keys['ArrowRight'] || virtualDir.right ? 1 : 0) -
+                      (keys['KeyA'] || keys['ArrowLeft'] || virtualDir.left ? 1 : 0);
+        const moveY = (keys['KeyS'] || keys['ArrowDown'] || virtualDir.down ? 1 : 0) -
+                      (keys['KeyW'] || keys['ArrowUp'] || virtualDir.up ? 1 : 0);
+        if (moveX !== 0 || moveY !== 0) {
+          const len = Math.hypot(moveX, moveY);
+          dx = moveX / len;
+          dy = moveY / len;
+        }
+
+        player.vx = dx * 620;
+        player.vy = dy * 620;
+        Sound.dash();
+
+        shockwaves.push({
+          x: player.x,
+          y: player.y,
+          r: 10,
+          maxR: state.selectedShip === 'valkyrie' ? 125 : 85,
+          color: '#22d3ee',
+          alpha: 0.9
+        });
+        addParticles(player.x, player.y, '#22d3ee', 18, 190);
+
+        // Valkyrie shockwave damages close enemies on dash
+        const dashDmg = state.selectedShip === 'valkyrie' ? 36 : 16;
+        const dashRange = state.selectedShip === 'valkyrie' ? 125 : 85;
+        enemies.forEach((e) => {
+          if (Math.hypot(e.x - player.x, e.y - player.y) <= dashRange + e.r) {
+            e.hp -= dashDmg;
+            addFloatText(e.x, e.y - 10, `-${dashDmg}`, '#22d3ee');
+          }
+        });
+        updateHUD();
+      }
+
+      function triggerNova() {
+        if (!state.running || state.paused || state.gameOver) return;
+        const count = player.orbitals.length;
+        if (count === 0) {
+          setPilotLog('Gather glowing Prism Orbs into your ring first before launching Sling Nova!');
+          return;
+        }
+
+        Sound.nova();
+        state.screenShake = 8;
+        const projectiles = count * 3;
+        const baseDmg = (state.selectedShip === 'valkyrie' ? 34 : 26) + state.upgrades.blaster * 6;
+
+        for (let i = 0; i < projectiles; i++) {
+          const ang = (Math.PI * 2 * i) / projectiles + player.orbitAngle;
+          bullets.push({
+            x: player.x + Math.cos(ang) * 24,
+            y: player.y + Math.sin(ang) * 24,
+            vx: Math.cos(ang) * 440,
+            vy: Math.sin(ang) * 440,
+            r: 5.5,
+            dmg: baseDmg,
+            color: '#e879f9',
+            pierce: 2,
+            life: 1.35
+          });
+        }
+
+        shockwaves.push({
+          x: player.x,
+          y: player.y,
+          r: 18,
+          maxR: 190 + count * 18,
+          color: '#e879f9',
+          alpha: 1
+        });
+
+        player.orbitals = [];
+        state.combo = Math.min(16, state.combo + count * 0.35);
+        state.maxCombo = Math.max(state.maxCombo, state.combo);
+        state.comboTimer = 5.0;
+
+        addFloatText(player.x, player.y - 24, `NOVA SLING x${count}!`, '#e879f9');
+        setPilotLog(`Launched a ${projectiles}-shard Prism Nova! Combo boosted to x${state.combo.toFixed(1)}!`);
+        updateHUD();
+      }
+
+      function triggerRepair() {
+        if (!state.running || state.gameOver) return;
+        if (state.stardust < 25) {
+          setPilotLog('Need 25 ✦ Stardust to synthesize emergency hull plating.');
+          return;
+        }
+        if (player.hp >= player.maxHp) {
+          setPilotLog('Shield integrity is already at 100% capacity!');
+          return;
+        }
+        state.stardust -= 25;
+        player.hp = Math.min(player.maxHp, player.hp + 40);
+        Sound.upgrade();
+        addParticles(player.x, player.y, '#34d399', 20, 140);
+        addFloatText(player.x, player.y - 20, '+40% SHIELD', '#34d399');
+        setPilotLog('Emergency shield matrix restored +40% hull integrity!');
+        updateHUD();
+      }
+
+      function buyUpgrade(key) {
+        if (state.upgrades[key] >= 5) return;
+        const cost = getUpgradeCost(key);
+        if (state.stardust < cost) {
+          setPilotLog(`Need ${cost} ✦ Stardust for this upgrade. Destroy enemies & collect orbs!`);
+          return;
+        }
+        state.stardust -= cost;
+        state.upgrades[key] += 1;
+        Sound.upgrade();
+        addFloatText(player.x, player.y - 26, `${key.toUpperCase()} LV.${state.upgrades[key]}!`, '#fbbf24');
+        setPilotLog(`Upgraded ${key.toUpperCase()} to Level ${state.upgrades[key]}!`);
+        updateHUD();
+      }
+
+      // ==========================================
+      // START / RESET MISSION
+      // ==========================================
+      function startNewGame() {
+        Sound.init();
+        const cfg = SHIP_CLASSES[state.selectedShip];
+
+        state.running = true;
+        state.paused = false;
+        state.gameOver = false;
+        state.score = 0;
+        state.stardust = 15; // Starting stardust so player can try an upgrade early!
+        state.wave = 1;
+        state.kills = 0;
+        state.combo = 1.0;
+        state.maxCombo = 1.0;
+        state.comboTimer = 0;
+        state.upgrades = { magnet: 1, orbit: 1, blaster: 1, speed: 1 };
+
+        player.x = width / 2;
+        player.y = height / 2;
+        player.vx = 0;
+        player.vy = 0;
+        player.maxHp = cfg.maxHp;
+        player.hp = cfg.maxHp;
+        player.dashCooldown = 0;
+        player.dashActive = 0;
+        player.invuln = 1.0;
+        player.orbitals = ['#22d3ee', '#e879f9']; // Start with 2 orbital crystals ready!
+
+        shipBadge.textContent = cfg.name;
+        orbs = [];
+        bullets = [];
+        enemyBullets = [];
+        enemies = [];
+        particles = [];
+        floatTexts = [];
+        shockwaves = [];
+
+        for (let i = 0; i < 7; i++) spawnOrb();
+        spawnWave(1);
+
+        startOverlay.classList.add('hidden');
+        gameOverOverlay.classList.add('hidden');
+        document.getElementById('btnPause').textContent = '⏸ Pause';
+        setPilotLog(`${cfg.name} online! Move near glowing orbs to lock them into your orbital ring.`);
+        updateHUD();
+      }
+
+      function triggerGameOver() {
+        state.gameOver = true;
+        state.running = false;
+        if (state.score > state.highScore) {
+          state.highScore = Math.floor(state.score);
+          saveHighScore(state.highScore);
+        }
+        document.getElementById('finalScoreText').textContent = Math.floor(state.score).toLocaleString();
+        document.getElementById('finalWaveText').textContent = state.wave;
+        document.getElementById('finalKillsText').textContent = state.kills;
+        document.getElementById('finalComboText').textContent = `x${state.maxCombo.toFixed(1)}`;
+        gameOverOverlay.classList.remove('hidden');
+        updateHUD();
+      }
+
+      // ==========================================
+      // MAIN SIMULATION UPDATE
+      // ==========================================
+      function updateSimulation(dt) {
+        const cfg = SHIP_CLASSES[state.selectedShip];
+
+        // Parallax starfield drift
+        for (let s of stars) {
+          s.y += s.speed * dt;
+          if (s.y > height) {
+            s.y = 0;
+            s.x = Math.random() * width;
+          }
+        }
+
+        if (!state.running || state.paused || state.gameOver) return;
+
+        if (state.screenShake > 0) {
+          state.screenShake = Math.max(0, state.screenShake - dt * 22);
+        }
+
+        // Combo decay
+        if (state.combo > 1.0) {
+          state.comboTimer -= dt;
+          if (state.comboTimer <= 0) {
+            state.combo = Math.max(1.0, state.combo - dt * 0.6);
+          }
+        }
+
+        // Cooldowns
+        if (player.dashCooldown > 0) player.dashCooldown = Math.max(0, player.dashCooldown - dt);
+        if (player.dashActive > 0) player.dashActive = Math.max(0, player.dashActive - dt);
+        if (player.invuln > 0) player.invuln = Math.max(0, player.invuln - dt);
+
+        // Player Movement
+        const moveSpeed = cfg.baseSpeed + (state.upgrades.speed - 1) * 26;
+        let ix = (keys['KeyD'] || keys['ArrowRight'] || virtualDir.right ? 1 : 0) -
+                 (keys['KeyA'] || keys['ArrowLeft'] || virtualDir.left ? 1 : 0);
+        let iy = (keys['KeyS'] || keys['ArrowDown'] || virtualDir.down ? 1 : 0) -
+                 (keys['KeyW'] || keys['ArrowUp'] || virtualDir.up ? 1 : 0);
+
+        if (pointer.active && ix === 0 && iy === 0) {
+          const dx = pointer.x - player.x;
+          const dy = pointer.y - player.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist > 10) {
+            ix = dx / dist;
+            iy = dy / dist;
+          }
+        }
+
+        if (player.dashActive <= 0) {
+          if (ix !== 0 || iy !== 0) {
+            const len = Math.hypot(ix, iy);
+            player.vx = (ix / len) * moveSpeed;
+            player.vy = (iy / len) * moveSpeed;
+            player.angle = Math.atan2(player.vy, player.vx);
+          } else {
+            player.vx *= Math.pow(0.001, dt);
+            player.vy *= Math.pow(0.001, dt);
+          }
+        }
+
+        player.x += player.vx * dt;
+        player.y += player.vy * dt;
+        player.x = Math.max(20, Math.min(width - 20, player.x));
+        player.y = Math.max(20, Math.min(height - 20, player.y));
+
+        // Rotate orbital ring
+        const orbitSpeed = 2.8 + state.upgrades.orbit * 0.35;
+        player.orbitAngle += orbitSpeed * dt;
+
+        // Auto-target nearest enemy for primary blasters
+        player.fireTimer -= dt;
+        const fireInterval = Math.max(0.11, cfg.fireInterval - (state.upgrades.blaster - 1) * 0.028);
+        if (player.fireTimer <= 0 && enemies.length > 0) {
+          let nearest = null;
+          let minDist = Infinity;
+          for (let e of enemies) {
+            const d = Math.hypot(e.x - player.x, e.y - player.y);
+            if (d < minDist) {
+              minDist = d;
+              nearest = e;
+            }
+          }
+          if (nearest && minDist < 460) {
+            player.fireTimer = fireInterval;
+            const aim = Math.atan2(nearest.y - player.y, nearest.x - player.x);
+            player.angle = aim;
+            const spread = state.upgrades.blaster >= 3 ? [-0.11, 0, 0.11] : [-0.06, 0.06];
+            spread.forEach((offset) => {
+              const a = aim + offset;
+              bullets.push({
+                x: player.x + Math.cos(a) * 16,
+                y: player.y + Math.sin(a) * 16,
+                vx: Math.cos(a) * 480,
+                vy: Math.sin(a) * 480,
+                r: 3.5,
+                dmg: 10 + state.upgrades.blaster * 3,
+                color: cfg.color,
+                pierce: state.upgrades.blaster >= 4 ? 2 : 1,
+                life: 1.1
+              });
+            });
+            Sound.laser();
+          }
+        }
+
+        // Update Orbs & Magnetic Tether Pull
+        const magnetRange = cfg.magnetRadius + (state.upgrades.magnet - 1) * 35;
+        const maxOrbitals = getMaxOrbitals();
+
+        for (let i = orbs.length - 1; i >= 0; i--) {
+          const o = orbs[i];
+          o.pulse += dt * 4;
+          const dx = player.x - o.x;
+          const dy = player.y - o.y;
+          const dist = Math.hypot(dx, dy);
+
+          if (dist < magnetRange) {
+            const pull = (1 - dist / magnetRange) * 420 + 140;
+            o.vx = (dx / dist) * pull;
+            o.vy = (dy / dist) * pull;
+          }
+
+          o.x += o.vx * dt;
+          o.y += o.vy * dt;
+
+          // Bounce off walls
+          if (o.x < 15 || o.x > width - 15) o.vx *= -1;
+          if (o.y < 15 || o.y > height - 15) o.vy *= -1;
+
+          if (dist < 24) {
+            // Collected!
+            Sound.orbPickup(state.combo);
+            state.stardust += o.value * 2;
+            state.combo = Math.min(16, state.combo + 0.2);
+            state.maxCombo = Math.max(state.maxCombo, state.combo);
+            state.comboTimer = 4.5;
+            const pts = Math.round(25 * state.combo);
+            state.score += pts;
+
+            if (player.orbitals.length < maxOrbitals) {
+              player.orbitals.push(o.color);
+              addFloatText(o.x, o.y, '+ORBITAL', o.color);
+            } else {
+              // Ring full -> bonus overdrive pulse!
+              state.score += pts;
+              addFloatText(o.x, o.y, `+${pts * 2}`, '#fbbf24');
+            }
+            addParticles(o.x, o.y, o.color, 8, 95);
+            orbs.splice(i, 1);
+          }
+        }
+
+        // Keep minimum ambient orbs in arena
+        if (orbs.length < 3 && Math.random() < dt * 1.4) {
+          spawnOrb();
+        }
+
+        // Calculate Orbital Crystal Positions & Contact Damage
+        const orbitRadius = 38;
+        const orbitalCoords = player.orbitals.map((col, idx) => {
+          const a = player.orbitAngle + (Math.PI * 2 * idx) / player.orbitals.length;
+          return {
+            x: player.x + Math.cos(a) * orbitRadius,
+            y: player.y + Math.sin(a) * orbitRadius,
+            color: col
+          };
+        });
+
+        // Update Player Bullets
+        for (let i = bullets.length - 1; i >= 0; i--) {
+          const b = bullets[i];
+          b.x += b.vx * dt;
+          b.y += b.vy * dt;
+          b.life -= dt;
+          if (b.life <= 0 || b.x < -20 || b.x > width + 20 || b.y < -20 || b.y > height + 20) {
+            bullets.splice(i, 1);
+            continue;
+          }
+          for (let j = enemies.length - 1; j >= 0; j--) {
+            const e = enemies[j];
+            if (Math.hypot(b.x - e.x, b.y - e.y) < b.r + e.r) {
+              e.hp -= b.dmg;
+              b.pierce -= 1;
+              addParticles(b.x, b.y, b.color, 4, 70);
+              if (b.pierce <= 0) {
+                bullets.splice(i, 1);
+                break;
+              }
+            }
+          }
+        }
+
+        // Update Enemy Projectiles
+        for (let i = enemyBullets.length - 1; i >= 0; i--) {
+          const eb = enemyBullets[i];
+          eb.x += eb.vx * dt;
+          eb.y += eb.vy * dt;
+          eb.life -= dt;
+          if (eb.life <= 0 || eb.x < 0 || eb.x > width || eb.y < 0 || eb.y > height) {
+            enemyBullets.splice(i, 1);
+            continue;
+          }
+          // Check if an orbital crystal intercepts the shot
+          let blocked = false;
+          for (let oc of orbitalCoords) {
+            if (Math.hypot(eb.x - oc.x, eb.y - oc.y) < eb.r + 9) {
+              addParticles(eb.x, eb.y, '#22d3ee', 6, 80);
+              enemyBullets.splice(i, 1);
+              blocked = true;
+              break;
+            }
+          }
+          if (blocked) continue;
+
+          // Hit player
+          if (player.invuln <= 0 && Math.hypot(eb.x - player.x, eb.y - player.y) < eb.r + 13) {
+            enemyBullets.splice(i, 1);
+            damagePlayer(14);
+          }
+        }
+
+        // Update Enemies
+        for (let i = enemies.length - 1; i >= 0; i--) {
+          const e = enemies[i];
+          const dx = player.x - e.x;
+          const dy = player.y - e.y;
+          const dist = Math.hypot(dx, dy) || 1;
+
+          if (e.isBoss) {
+            e.phaseAngle += dt * 1.4;
+            e.x += Math.cos(e.phaseAngle) * e.speed * dt;
+            e.y = 65 + Math.sin(e.phaseAngle * 2) * 28;
+            e.x = Math.max(50, Math.min(width - 50, e.x));
+            e.fireCooldown -= dt;
+            if (e.fireCooldown <= 0) {
+              e.fireCooldown = 1.65;
+              const volley = 8;
+              for (let k = 0; k < volley; k++) {
+                const ang = (Math.PI * 2 * k) / volley + e.phaseAngle;
+                enemyBullets.push({
+                  x: e.x,
+                  y: e.y,
+                  vx: Math.cos(ang) * 195,
+                  vy: Math.sin(ang) * 195,
+                  r: 5,
+                  life: 3.0
+                });
+              }
+            }
+          } else if (e.type === 'sniper') {
+            // Keep medium range & shoot aimed bolt
+            if (dist > 210) {
+              e.x += (dx / dist) * e.speed * dt;
+              e.y += (dy / dist) * e.speed * dt;
+            } else if (dist < 130) {
+              e.x -= (dx / dist) * e.speed * 0.7 * dt;
+              e.y -= (dy / dist) * e.speed * 0.7 * dt;
+            }
+            e.fireCooldown -= dt;
+            if (e.fireCooldown <= 0) {
+              e.fireCooldown = 2.4;
+              const aim = Math.atan2(dy, dx);
+              enemyBullets.push({
+                x: e.x,
+                y: e.y,
+                vx: Math.cos(aim) * 250,
+                vy: Math.sin(aim) * 250,
+                r: 4.5,
+                life: 2.6
+              });
+            }
+          } else {
+            // Drifter & Pulsar steer toward player
+            e.x += (dx / dist) * e.speed * dt;
+            e.y += (dy / dist) * e.speed * dt;
+          }
+
+          // Check Orbital Crystal Contact Zaps
+          for (let oc of orbitalCoords) {
+            if (Math.hypot(e.x - oc.x, e.y - oc.y) < e.r + 10) {
+              e.hp -= 55 * dt;
+              if (Math.random() < 0.25) {
+                addParticles(oc.x, oc.y, oc.color, 1, 50);
+              }
+            }
+          }
+
+          // Check Enemy Collision with Player
+          if (player.invuln <= 0 && dist < e.r + 14) {
+            if (player.orbitals.length > 0) {
+              // Orbital sacrifices itself to block collision damage!
+              const lostColor = player.orbitals.pop();
+              player.invuln = 0.65;
+              e.hp -= 45;
+              Sound.hit();
+              addParticles(player.x, player.y, lostColor, 16, 160);
+              addFloatText(player.x, player.y - 18, 'ORBITAL SHIELD BLOCK!', '#22d3ee');
+            } else {
+              damagePlayer(e.isBoss ? 28 : 18);
+              if (!e.isBoss) e.hp = 0;
+            }
+          }
+
+          // Check Enemy Death
+          if (e.hp <= 0) {
+            state.kills += 1;
+            state.combo = Math.min(16, state.combo + (e.isBoss ? 2.0 : 0.25));
+            state.maxCombo = Math.max(state.maxCombo, state.combo);
+            state.comboTimer = 4.5;
+
+            const pts = Math.round((e.isBoss ? 500 : 45) * state.combo);
+            state.score += pts;
+            state.stardust += e.isBoss ? 25 : 3;
+
+            addParticles(e.x, e.y, e.isBoss ? '#fbbf24' : '#f43f5e', e.isBoss ? 35 : 14, 160);
+            addFloatText(e.x, e.y, `+${pts}`, '#fbbf24');
+
+            // Drop Prism Orb
+            if (e.isBoss) {
+              for (let k = 0; k < 5; k++) spawnOrb(e.x + (Math.random() - 0.5) * 40, e.y + (Math.random() - 0.5) * 40, 2);
+            } else if (Math.random() < 0.68) {
+              spawnOrb(e.x, e.y, 1);
+            }
+
+            enemies.splice(i, 1);
+          }
+        }
+
+        // Check Wave Completion
+        if (enemies.length === 0) {
+          state.wave += 1;
+          Sound.waveClear();
+          player.hp = Math.min(player.maxHp, player.hp + 12);
+          spawnWave(state.wave);
+        }
+
+        // Update Particles, Shockwaves & Floating Texts
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.life -= dt;
+          if (p.life <= 0) particles.splice(i, 1);
+        }
+
+        for (let i = shockwaves.length - 1; i >= 0; i--) {
+          const sw = shockwaves[i];
+          sw.r += (sw.maxR - sw.r) * 8 * dt;
+          sw.alpha -= dt * 2.1;
+          if (sw.alpha <= 0) shockwaves.splice(i, 1);
+        }
+
+        for (let i = floatTexts.length - 1; i >= 0; i--) {
+          const ft = floatTexts[i];
+          ft.y -= 32 * dt;
+          ft.life -= dt;
+          if (ft.life <= 0) floatTexts.splice(i, 1);
+        }
+
+        if (state.score > state.highScore) {
+          state.highScore = Math.floor(state.score);
+        }
+
+        updateHUD();
+      }
+
+      function damagePlayer(amount) {
+        player.hp = Math.max(0, player.hp - amount);
+        player.invuln = 0.75;
+        state.combo = Math.max(1.0, state.combo * 0.5);
+        state.screenShake = 10;
+        Sound.hit();
+        addParticles(player.x, player.y, '#f43f5e', 18, 170);
+        addFloatText(player.x, player.y - 16, `-${amount} SHIELD`, '#f43f5e');
+        if (player.hp <= 0) {
+          triggerGameOver();
+        }
+      }
+
+      // ==========================================
+      // RENDERING PIPELINE
+      // ==========================================
+      function drawFrame() {
+        ctx.save();
+        ctx.fillStyle = '#04060e';
+        ctx.fillRect(0, 0, width, height);
+
+        if (state.screenShake > 0) {
+          const sx = (Math.random() - 0.5) * state.screenShake;
+          const sy = (Math.random() - 0.5) * state.screenShake;
+          ctx.translate(sx, sy);
+        }
+
+        // Subtle Cosmic Grid
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.05)';
+        ctx.lineWidth = 1;
+        const step = 48;
+        for (let x = 0; x < width; x += step) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, height);
+          ctx.stroke();
+        }
+        for (let y = 0; y < height; y += step) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(width, y);
+          ctx.stroke();
+        }
+
+        // Stars
+        for (let s of stars) {
+          ctx.globalAlpha = s.alpha;
+          ctx.fillStyle = s.hue;
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        const cfg = SHIP_CLASSES[state.selectedShip];
+        const magnetRange = cfg.magnetRadius + (state.upgrades.magnet - 1) * 35;
+
+        // Draw Subtle Magnet Field Ring around Player
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.12)';
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([5, 6]);
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, magnetRange, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Draw Shockwaves
+        for (let sw of shockwaves) {
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, sw.alpha);
+          ctx.strokeStyle = sw.color;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(sw.x, sw.y, sw.r, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // Draw Prism Orbs & Gravity Tether Lines
+        for (let o of orbs) {
+          const dist = Math.hypot(player.x - o.x, player.y - o.y);
+          if (dist < magnetRange) {
+            ctx.strokeStyle = 'rgba(34, 211, 238, 0.28)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(player.x, player.y);
+            ctx.lineTo(o.x, o.y);
+            ctx.stroke();
+          }
+          const r = o.r + Math.sin(o.pulse) * 1.5;
+          ctx.fillStyle = o.color;
+          ctx.shadowColor = o.color;
+          ctx.shadowBlur = 12;
+          ctx.beginPath();
+          ctx.arc(o.x, o.y, r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+
+        // Draw Player Bullets
+        for (let b of bullets) {
+          ctx.fillStyle = b.color;
+          ctx.shadowColor = b.color;
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+
+        // Draw Enemy Projectiles
+        for (let eb of enemyBullets) {
+          ctx.fillStyle = '#fb7185';
+          ctx.shadowColor = '#f43f5e';
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.arc(eb.x, eb.y, eb.r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+
+        // Draw Enemies
+        for (let e of enemies) {
+          ctx.save();
+          ctx.translate(e.x, e.y);
+          if (e.isBoss) {
+            ctx.strokeStyle = '#f43f5e';
+            ctx.fillStyle = '#4c0519';
+            ctx.lineWidth = 3;
+            ctx.shadowColor = '#f43f5e';
+            ctx.shadowBlur = 16;
+            ctx.beginPath();
+            for (let k = 0; k < 8; k++) {
+              const a = (Math.PI * 2 * k) / 8 + e.phaseAngle;
+              const rad = k % 2 === 0 ? e.r : e.r * 0.68;
+              const px = Math.cos(a) * rad;
+              const py = Math.sin(a) * rad;
+              if (k === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+          } else if (e.type === 'sniper') {
+            ctx.strokeStyle = '#fbbf24';
+            ctx.fillStyle = '#451a03';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, -e.r);
+            ctx.lineTo(e.r, e.r);
+            ctx.lineTo(-e.r, e.r);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+          } else if (e.type === 'pulsar') {
+            ctx.strokeStyle = '#c084fc';
+            ctx.fillStyle = '#2e1065';
+            ctx.lineWidth = 2.2;
+            ctx.beginPath();
+            ctx.arc(0, 0, e.r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+          } else {
+            // Drifter diamond
+            ctx.strokeStyle = '#fb7185';
+            ctx.fillStyle = '#3b0764';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, -e.r);
+            ctx.lineTo(e.r, 0);
+            ctx.lineTo(0, e.r);
+            ctx.lineTo(-e.r, 0);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+        // Draw Orbiting Prism Crystals around Player
+        const orbitRadius = 38;
+        player.orbitals.forEach((col, idx) => {
+          const a = player.orbitAngle + (Math.PI * 2 * idx) / player.orbitals.length;
+          const ox = player.x + Math.cos(a) * orbitRadius;
+          const oy = player.y + Math.sin(a) * orbitRadius;
+
+          ctx.strokeStyle = 'rgba(232, 121, 249, 0.25)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(player.x, player.y);
+          ctx.lineTo(ox, oy);
+          ctx.stroke();
+
+          ctx.fillStyle = col;
+          ctx.shadowColor = col;
+          ctx.shadowBlur = 10;
+          ctx.beginPath();
+          ctx.arc(ox, oy, 6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        });
+
+        // Draw Player Star-Cruiser
+        ctx.save();
+        ctx.translate(player.x, player.y);
+        ctx.rotate(player.angle);
+        if (player.invuln > 0 && Math.floor(player.invuln * 16) % 2 === 0) {
+          ctx.globalAlpha = 0.55;
+        }
+        ctx.fillStyle = '#0f172a';
+        ctx.strokeStyle = cfg.color;
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = cfg.color;
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.moveTo(16, 0);
+        ctx.lineTo(-12, -11);
+        ctx.lineTo(-7, 0);
+        ctx.lineTo(-12, 11);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+
+        // Draw Particles
+        for (let p of particles) {
+          ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        // Draw Floating Combat Text
+        ctx.font = 'bold 11px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        for (let ft of floatTexts) {
+          ctx.globalAlpha = Math.max(0, ft.life);
+          ctx.fillStyle = ft.color;
+          ctx.fillText(ft.text, ft.x, ft.y);
+        }
+        ctx.globalAlpha = 1;
+
+        // Paused Banner inside Canvas
+        if (state.paused && state.running && !state.gameOver) {
+          ctx.fillStyle = 'rgba(4, 6, 14, 0.65)';
+          ctx.fillRect(0, 0, width, height);
+          ctx.fillStyle = '#38bdf8';
+          ctx.font = '800 22px Inter, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('SYSTEM PAUSED', width / 2, height / 2 - 6);
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '500 12px Inter, sans-serif';
+          ctx.fillText('Spend ✦ Stardust in the Tech Lab or click Resume to continue', width / 2, height / 2 + 18);
+        }
+
+        ctx.restore();
+      }
+
+      // ==========================================
+      // ANIMATION LOOP
+      // ==========================================
+      function gameLoop(timestamp) {
+        if (!lastTime) lastTime = timestamp;
+        const dt = Math.min(0.05, (timestamp - lastTime) / 1000);
+        lastTime = timestamp;
+
+        updateSimulation(dt);
+        drawFrame();
+        animId = requestAnimationFrame(gameLoop);
+      }
+
+      // ==========================================
+      // EVENT LISTENERS (KEYBOARD, POINTER, UI)
+      // ==========================================
+      window.addEventListener('keydown', (e) => {
+        keys[e.code] = true;
+        if (e.code === 'Space' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+          if (state.running && !state.paused && !state.gameOver) {
+            e.preventDefault();
+            triggerDash();
+          }
+        } else if (e.code === 'KeyE') {
+          if (state.running && !state.paused && !state.gameOver) {
+            e.preventDefault();
+            triggerNova();
+          }
+        } else if (e.code === 'KeyP') {
+          togglePause();
+        }
+      });
+
+      window.addEventListener('keyup', (e) => {
+        keys[e.code] = false;
+      });
+
+      // Canvas Pointer / Touch Steering
+      function updatePointerPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        pointer.x = ((e.clientX - rect.left) / rect.width) * width;
+        pointer.y = ((e.clientY - rect.top) / rect.height) * height;
+      }
+
+      canvas.addEventListener('pointerdown', (e) => {
+        Sound.init();
+        if (e.button === 2) {
+          e.preventDefault();
+          triggerNova();
+          return;
+        }
+        pointer.active = true;
+        updatePointerPos(e);
+      });
+
+      canvas.addEventListener('pointermove', (e) => {
+        if (pointer.active) updatePointerPos(e);
+      });
+
+      window.addEventListener('pointerup', () => {
+        pointer.active = false;
+      });
+
+      canvas.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        triggerNova();
+      });
+
+      // Virtual D-Pad Bindings
+      function bindHoldButton(btnId, dirKey) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        const start = (e) => { e.preventDefault(); virtualDir[dirKey] = true; };
+        const end = () => { virtualDir[dirKey] = false; };
+        btn.addEventListener('pointerdown', start);
+        btn.addEventListener('pointerup', end);
+        btn.addEventListener('pointerleave', end);
+        btn.addEventListener('pointercancel', end);
+      }
+      bindHoldButton('btnMoveLeft', 'left');
+      bindHoldButton('btnMoveRight', 'right');
+      bindHoldButton('btnMoveUp', 'up');
+      bindHoldButton('btnMoveDown', 'down');
+
+      // Ship Class Selection Buttons
+      document.querySelectorAll('.ship-select-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          Sound.init();
+          Sound.orbPickup(2);
+          state.selectedShip = btn.getAttribute('data-ship') || 'vanguard';
+          document.querySelectorAll('.ship-select-btn').forEach((b) => {
+            b.classList.remove('border-2', 'border-cyan-400', 'bg-cyan-500/10');
+            b.classList.add('border', 'border-slate-700/80');
+          });
+          btn.classList.remove('border', 'border-slate-700/80');
+          btn.classList.add('border-2', 'border-cyan-400', 'bg-cyan-500/10');
+        });
+      });
+
+      // Top & Dock Action Buttons
+      document.getElementById('btnStartGame').addEventListener('click', startNewGame);
+      document.getElementById('btnPlayAgain').addEventListener('click', startNewGame);
+      document.getElementById('btnChangeShip').addEventListener('click', () => {
+        gameOverOverlay.classList.add('hidden');
+        startOverlay.classList.remove('hidden');
+      });
+
+      document.getElementById('btnDashAction').addEventListener('click', triggerDash);
+      document.getElementById('btnNovaAction').addEventListener('click', triggerNova);
+      document.getElementById('btnOverdriveAction').addEventListener('click', triggerRepair);
+
+      document.getElementById('btnUpgMagnet').addEventListener('click', () => buyUpgrade('magnet'));
+      document.getElementById('btnUpgOrbit').addEventListener('click', () => buyUpgrade('orbit'));
+      document.getElementById('btnUpgBlaster').addEventListener('click', () => buyUpgrade('blaster'));
+      document.getElementById('btnUpgSpeed').addEventListener('click', () => buyUpgrade('speed'));
+
+      document.getElementById('btnOpenUpgrades').addEventListener('click', () => {
+        const lab = document.getElementById('upgradeListContainer');
+        if (lab) {
+          lab.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          setPilotLog('Select any upgrade card in the Stardust Tech Lab to boost your ship!');
+        }
+      });
+
+      function togglePause() {
+        if (!state.running || state.gameOver) return;
+        state.paused = !state.paused;
+        document.getElementById('btnPause').textContent = state.paused ? '▶ Resume' : '⏸ Pause';
+      }
+      document.getElementById('btnPause').addEventListener('click', togglePause);
+
+      document.getElementById('btnMute').addEventListener('click', () => {
+        Sound.muted = !Sound.muted;
+        document.getElementById('btnMute').textContent = Sound.muted ? '🔇 Muted' : '🔊 SFX';
+      });
+
+      document.getElementById('btnOpenGuide').addEventListener('click', () => {
+        if (state.running && !state.paused) togglePause();
+        guideModal.classList.remove('hidden');
+      });
+      document.getElementById('btnCloseGuide').addEventListener('click', () => {
+        guideModal.classList.add('hidden');
+      });
+      document.getElementById('btnResumeFromGuide').addEventListener('click', () => {
+        guideModal.classList.add('hidden');
+        if (state.running && state.paused) togglePause();
+      });
+
+      // Start on load
+      window.onload = function () {
+        resizeCanvas();
+        updateHUD();
+        if (animId) cancelAnimationFrame(animId);
+        animId = requestAnimationFrame(gameLoop);
+      };
+    })();
+  </script>
+</body>
+</html>
